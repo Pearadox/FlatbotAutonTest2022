@@ -10,6 +10,7 @@ import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
@@ -24,10 +25,10 @@ public class Drivetrain extends SubsystemBase {
   /** Creates a new Drivetrain. */
   private static Drivetrain INSTANCE;
 
-  private final CANSparkMax leftMotor1 = new CANSparkMax(3, MotorType.kBrushless);
-  private final CANSparkMax leftMotor2 = new CANSparkMax(4, MotorType.kBrushless);
-  private final CANSparkMax rightMotor1 = new CANSparkMax(5, MotorType.kBrushless);
-  private final CANSparkMax rightMotor2 = new CANSparkMax(6, MotorType.kBrushless);
+  private final CANSparkMax leftMotor1 = new CANSparkMax(5, MotorType.kBrushless);
+  private final CANSparkMax leftMotor2 = new CANSparkMax(6, MotorType.kBrushless);
+  private final CANSparkMax rightMotor1 = new CANSparkMax(3, MotorType.kBrushless);
+  private final CANSparkMax rightMotor2 = new CANSparkMax(4, MotorType.kBrushless);
 
   private final RelativeEncoder leftEncoder1 = leftMotor1.getEncoder();
   private final RelativeEncoder leftEncoder2 = leftMotor2.getEncoder();
@@ -39,11 +40,16 @@ public class Drivetrain extends SubsystemBase {
 
   private final DifferentialDriveOdometry odometry;
   private Drivetrain() {
-    leftMotor1.setInverted(false);
-    rightMotor1.setInverted(true);
+    leftMotor1.setInverted(true);
+    rightMotor1.setInverted(false);
     leftMotor2.follow(leftMotor1);
     rightMotor2.follow(rightMotor1);
     zeroEncoder();
+
+    leftMotor1.setSmartCurrentLimit(50);
+    leftMotor2.setSmartCurrentLimit(50);
+    rightMotor1.setSmartCurrentLimit(50);
+    rightMotor2.setSmartCurrentLimit(50);
 
     odometry = new DifferentialDriveOdometry(Rotation2d.fromDegrees(getHeading()));
   }
@@ -79,7 +85,7 @@ public class Drivetrain extends SubsystemBase {
       twist = 0;
     }
 
-    setVoltages(10 * (throttle - twist), 10 * (throttle + twist));
+    setVoltages(10 * (throttle + twist), 10 * (throttle - twist));
   }
 
   public double getLeftEncoderRevs() {
@@ -111,8 +117,13 @@ public class Drivetrain extends SubsystemBase {
     zeroEncoder();
     odometry.resetPosition(pose, gyro.getRotation2d());
   }
+
+  public void resetGyro() {
+    gyro.zeroYaw();
+  }
+
   public double getHeading() {
-    return gyro.getRotation2d().getDegrees();
+    return -gyro.getRotation2d().getDegrees() - 180;
   }
 
   public void zeroEncoder() {
@@ -127,7 +138,11 @@ public class Drivetrain extends SubsystemBase {
     // This method will be called once per scheduler run
     odometry.update(
       gyro.getRotation2d(), getLeftEncoderDistance(), getRightEncoderDistance());
-    System.out.println(getLeftEncoderDistance() + ", " + getRightEncoderDistance() + ", " + odometry.getPoseMeters());
+      System.out.println(getLeftEncoderDistance() + ", " + getRightEncoderDistance() + ", " + odometry.getPoseMeters());
+    SmartDashboard.putNumber("Right Encoders Distance", getRightEncoderDistance());
+    SmartDashboard.putNumber("Left Encoders Distance", getLeftEncoderDistance());
+    SmartDashboard.putNumber("Heading", getHeading());
+    SmartDashboard.putNumber("Yaw", gyro.getYaw());
   }
 
   public static Drivetrain getInstance() {

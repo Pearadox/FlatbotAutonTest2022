@@ -17,7 +17,9 @@ import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.commands.ExampleCommand;
+import frc.robot.commands.FiveBallAuton;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.util.TrajectoryCache;
@@ -26,6 +28,8 @@ import edu.wpi.first.wpilibj2.command.RamseteCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 
 import static frc.robot.Constants.*;
+
+import java.nio.file.Paths;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -36,21 +40,19 @@ import static frc.robot.Constants.*;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
-  private final Drivetrain drivetrain = Drivetrain.getInstance();
+  public final static Drivetrain drivetrain = Drivetrain.getInstance();
 
   private final ExampleCommand m_autoCommand = new ExampleCommand(m_exampleSubsystem);
   public final Joystick driverJoystick = new Joystick(0);
   public final XboxController driverXbox = new XboxController(2);
   public SendableChooser<String> pathSelector;
 
-  private TrajectoryCache trajectories = new TrajectoryCache();
-
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the button bindings
     configureButtonBindings();
     pathSelector = new SendableChooser<>();
-    
+    SmartDashboard.putData(pathSelector);
     loadTrajectoryPaths();
     drivetrain.setDefaultCommand(new RunCommand(
       () -> drivetrain.arcadeDrive(-driverXbox.getRawAxis(1), driverXbox.getRawAxis(4), true)
@@ -70,6 +72,18 @@ public class RobotContainer {
     // sendCacheTrajectory("Slalom", "output/SlalomPath");
     // pathSelector.setDefaultOption("ThreeBallAuton", "ThreeBallAuton");
     // pathSelector.addOption("SixBallBackAuton", "SixBallBackAuton");
+    pathSelector.addOption("Straight", "Straight");
+    pathSelector.addOption("3 Ball Test", "3 Ball Test");
+    pathSelector.addOption("HalfArc", "HalfArc");
+    pathSelector.addOption("BackHalfArc", "BackHalfArc");
+    pathSelector.addOption("TerminalLoad", "TerminalLoad");
+    pathSelector.addOption("5 Ball Auton", "5 Ball Auton");
+
+    TrajectoryCache.add("3 Ball Test", "3 Ball Test");
+    TrajectoryCache.add("Straight", "Straight");
+    TrajectoryCache.add("HalfArc", "HalfArc");
+    TrajectoryCache.add("BackHalfArc", "BackHalfArc");
+    TrajectoryCache.add("TerminalLoad", "TerminalLoad");
   }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -86,10 +100,10 @@ public class RobotContainer {
 
     var TrajectoryConfig = new TrajectoryConfig(
       DrivetrainConstants.MAX_VELOCITY, DrivetrainConstants.MAX_ACCEL);
-
-    TrajectoryCache.add("3 Ball Test", "3 Ball Test");
-    TrajectoryCache.add("Straight", "Straight");
-    Trajectory pathTrajectory = TrajectoryCache.get("Straight");
+    if (pathSelector.getSelected().equals("5 Ball Auton")) {
+      return new FiveBallAuton(drivetrain).andThen(() -> drivetrain.setVoltages(0, 0));
+    }
+    Trajectory pathTrajectory = TrajectoryCache.get(pathSelector.getSelected());
     RamseteCommand ramseteCommand = createRamseteCommand(pathTrajectory);
     // Reset odometry to the starting pose of the trajectory.
     drivetrain.resetOdometry(pathTrajectory.getInitialPose());
@@ -103,7 +117,7 @@ public class RobotContainer {
     return new RamseteCommand(
       pathTrajectory,
       drivetrain::getPose,
-      new RamseteController(DrivetrainConstants.B / 2, DrivetrainConstants.ZETA),
+      new RamseteController(DrivetrainConstants.B, DrivetrainConstants.ZETA),
       new SimpleMotorFeedforward(DrivetrainConstants.kS,
                                  DrivetrainConstants.kV,
                                  DrivetrainConstants.kA),

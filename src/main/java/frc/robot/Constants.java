@@ -33,7 +33,7 @@ public final class Constants {
     public static final double GEAR_RATIO = 364d / 36d;
 
     public static final double WHEEL_CIRCUMFRENCE = 0.489;
-    public static final double B = 2.0d;
+    public static final double B = 1.4d; //2
     public static final double ZETA = 0.7d;
   }
 }
